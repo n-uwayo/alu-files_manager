@@ -1,33 +1,43 @@
-// utils/db.js
+// db.js
 const mongoose = require('mongoose');
-require('dotenv').config();
+const dotenv = require('dotenv');
 
-class DBClient {
-    constructor() {
-        const dbHost = process.env.DB_HOST || 'localhost';
-        const dbPort = process.env.DB_PORT || 27017;
-        const dbName = process.env.DB_DATABASE || 'files_manager';
-        
-        mongoose.connect(`mongodb://${dbHost}:${dbPort}/${dbName}`, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
-    }
+dotenv.config();
 
-    isAlive() {
-        return mongoose.connection.readyState === 1;
-    }
+class DbClient {
+  constructor() {
+    this.db = mongoose.connection;
+    this.db.on('error', console.error.bind(console, 'error in connection:'));
+    this.db.once('open', function () {
+      console.log('Database well connected');
+    });
+  }
 
-    async nbUsers() {
-        const User = mongoose.model('User', new mongoose.Schema({ email: String }));
-        return User.countDocuments();
-    }
+  // Check if the database connection is alive
+  isAlive() {
+    return this.db.readyState === 1;
+  }
 
-    async nbFiles() {
-        const File = mongoose.model('File', new mongoose.Schema({ name: String }));
-        return File.countDocuments();
+  // Get the number of users in the database
+  async nbUsers() {
+    try {
+      const users = await mongoose.model('User').countDocuments();
+      return users;
+    } catch (err) {
+      console.error('Error getting user count:', err);
     }
+  }
+
+  // Get the number of files in the database
+  async nbFiles() {
+    try {
+      const files = await mongoose.model('File').countDocuments();
+      return files;
+    } catch (err) {
+      console.error('Error getting file count:', err);
+    }
+  }
 }
 
-const dbClient = new DBClient();
+const dbClient = new DbClient();
 module.exports = dbClient;
