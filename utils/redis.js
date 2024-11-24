@@ -1,49 +1,62 @@
-// redis.js
-const redis = require('redis');
+import redis from 'redis';
+import { promisify } from 'util';
 
-const client = redis.createClient();
-
+/**
+ * Class for performing operations with Redis service
+ */
 class RedisClient {
   constructor() {
-    this.client = client;
-    this.client.on('error', (err) => console.log('Redis Client Error', err));
+    this.client = redis.createClient();
+    this.getAsync = promisify(this.client.get).bind(this.client);
+
+    this.client.on('error', (error) => {
+      console.log(`Redis client not connected to the server: ${error.message}`);
+    });
+
+    this.client.on('connect', () => {
+      // console.log('Redis client connected to the server');
+    });
   }
 
-  // check if Redis client is alive
+  /**
+   * Checks if connection to Redis is Alive
+   * @return {boolean} true if connection alive or false if not
+   */
   isAlive() {
     return this.client.connected;
   }
 
-  // get a value from Redis
+  /**
+   * gets value corresponding to key in redis
+   * @key {string} key to search for in redis
+   * @return {string}  value of key
+   */
   async get(key) {
-    return new Promise((resolve, reject) => {
-      this.client.get(key, (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
+    const value = await this.getAsync(key);
+    return value;
   }
 
-  // set a value in Redis with an expiration time
+  /**
+   * Creates a new key in redis with a specific TTL
+   * @key {string} key to be saved in redis
+   * @value {string} value to be asigned to key
+   * @duration {number} TTL of key
+   * @return {undefined}  No return
+   */
   async set(key, value, duration) {
-    return new Promise((resolve, reject) => {
-      this.client.setex(key, duration, value, (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
+    this.client.setex(key, duration, value);
   }
 
-  // delete a key in Redis
+  /**
+   * Deletes key in redis service
+   * @key {string} key to be deleted
+   * @return {undefined}  No return
+   */
   async del(key) {
-    return new Promise((resolve, reject) => {
-      this.client.del(key, (err, result) => {
-        if (err) reject(err);
-        resolve(result);
-      });
-    });
+    this.client.del(key);
   }
 }
 
 const redisClient = new RedisClient();
-module.exports = redisClient;
+
+export default redisClient;
