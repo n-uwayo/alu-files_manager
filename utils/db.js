@@ -1,43 +1,35 @@
 // db.js
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
+const { MongoClient } = require('mongodb');
 
-dotenv.config();
+const host = process.env.DB_HOST || 'localhost';
+const port = process.env.DB_PORT || 27017;
+const database = process.env.DB_DATABASE || 'files_manager';
+const url = `mongodb://${host}:${port}`;
 
-class DbClient {
+class DBClient {
   constructor() {
-    this.db = mongoose.connection;
-    this.db.on('error', console.error.bind(console, 'error in connection:'));
-    this.db.once('open', function () {
-      console.log('Database well connected');
+    MongoClient.connect(url, (err, client) => {
+      if (!err) {
+        this.db = client.db(database);
+      } else {
+        this.db = false;
+      }
     });
   }
 
-  // Check if the database connection is alive
   isAlive() {
-    return this.db.readyState === 1;
+    if (this.db) return true;
+    return false;
   }
 
-  // Get the number of users in the database
   async nbUsers() {
-    try {
-      const users = await mongoose.model('User').countDocuments();
-      return users;
-    } catch (err) {
-      console.error('Error getting user count:', err);
-    }
+    return this.db.collection('users').countDocuments();
   }
 
-  // Get the number of files in the database
   async nbFiles() {
-    try {
-      const files = await mongoose.model('File').countDocuments();
-      return files;
-    } catch (err) {
-      console.error('Error getting file count:', err);
-    }
+    return this.db.collection('files').countDocuments();
   }
 }
 
-const dbClient = new DbClient();
-module.exports = dbClient;
+const dbClient = new DBClient();
+export default dbClient;
